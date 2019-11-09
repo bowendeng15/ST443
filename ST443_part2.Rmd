@@ -2,7 +2,9 @@
 title: "Estimation of Graphical Models Using Lasso-Related Approaches"
 author: "Bowen Deng"
 date: "08/11/2019"
-output: html_document
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +17,7 @@ library(glmnet) #lasso
 ```
 
 ## 1 Generate Samples
+***
 
 ```{r}
 set.seed(19970530)
@@ -38,6 +41,8 @@ Theta = Theta/delta
 Sigma = solve(Theta) # Sigma is inverse of Theta
 
 X = mvrnorm(n=n, mu=rep(0, p), Sigma=Sigma)
+
+head(Sigma[,1:6])
 ```
 
 ```{r}
@@ -56,10 +61,11 @@ for (i in 1:(p-1)){
     }
   }
 }
+head(E_true)
 ```
 
 ## 2 Estimation 
-
+***
 ### 2.1 Node-wise Lasso Approach
 ```{r}
 # estimate beta
@@ -103,7 +109,7 @@ table(E_2[,3], E_true[,3])
 ```
 
 ## 3 ROC Curve and Overall Performance 
-
+***
 ### 3.1 Node-wise Lasso Approach
 
 ```{r Beta}
@@ -183,7 +189,7 @@ for (k in 1:len_grid){
 }
 ```
 
-```{r}
+```{r, fig.height = 5, fig.width = 10, fig.align = "center"}
 plot_roc <- function(TPR, FPR, title){
   plot(FPR, TPR, "l"
        , xlab="FPR", ylab="TPR"
@@ -200,7 +206,7 @@ plot_roc(tpr_2, fpr_2, "ROC Curve of Method 2")
 ```
 
 
-```{r}
+```{r, results='hold'}
 auc <- function(TPR, FPR){
   dFPR <- c(diff(FPR), 0)
   dTPR <- c(diff(TPR), 0)
@@ -217,11 +223,13 @@ cat("AUC for method 2: ", auc(tpr_2, fpr_2), "\n")
 ```
 
 ## 4 Optimal Tuning Parameters
+***
 ```{r}
 # TODO
 ```
 
 ## 5 Mean and Standard Error of Different Approaches
+***
 ```{r}
 # TODO
 ```
