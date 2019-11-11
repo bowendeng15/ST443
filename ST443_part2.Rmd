@@ -59,7 +59,7 @@ table(pred.glasso$E[,3], data$E_true[,3]) # compare estimation E_3 and true set 
 To produce a ROC curve, a grid of lambda is needed.
 ```{r}
 len_grid <- 50
-grid <- 10 ^ seq(1,-5, length = len_grid)
+grid <- 10 ^ seq(0.5,-2.5, length = len_grid)
 ```
 
 Run nodewise lasso over the grid. For this data, It took more than 10 secs.
@@ -101,37 +101,83 @@ Plot error rate $(FN+FP)/total$ against lambda, we can find the optimal lambda g
 ```{r}
 plot(log10(grid), perf.nodewise$error_1, type="l"
      , xlab = "log10(lambda)", ylab = "error rate"
-     , col="blue"
+     , col=2
      )
-lines(log10(grid), perf.nodewise$error_2, col="red")
-lines(log10(grid), perf.glasso$error, col="green")
-legend("topright",legend=c("method 1","method 2", "method 3"), col=c("blue","red", "green"), pch="-")
+lines(log10(grid), perf.nodewise$error_2, col=3)
+lines(log10(grid), perf.glasso$error, col=4)
+legend("topright",legend=c("approach 1","approach 2", "approach 3"), col=c(2,3,4), pch="-")
 
 lambda_1 <- grid[which.min(perf.nodewise$error_1)]
 lambda_2 <- grid[which.min(perf.nodewise$error_2)]
 lambda_3 <- grid[which.min(perf.glasso$error)]
 
-abline(v=log10(lambda_1), col="blue", lty=2)
-abline(v=log10(lambda_2), col="red", lty=4)
-abline(v=log10(lambda_3), col="green", lty=2)
+abline(v=log10(lambda_1), col=2, lty=2)
+abline(v=log10(lambda_2), col=3, lty=4)
+abline(v=log10(lambda_3), col=4, lty=2)
 ```
+
+Inspired by K-fold cross validaion, K error rates are generated on each lambda using different folds of data. Then one-standard-deviation rule can be applied.
+```{r}
+set.seed(666)
+
+len_grid <- 50
+grid <- 10 ^ seq(-1.2,-1.6, length = len_grid)
+
+K =10
+folds = sample(rep(1:K, length = n))
+
+Error_1 <- c()
+Error_2 <- c()
+Error_3 <- c()
+for (k in 1:K){
+  perf.nodewise <- performance.nodewise.grid(data$X[folds!=k,], data$E_true, grid)
+  perf.glasso <- performance.glasso.grid(data$X[folds!=k,], data$E_true, grid)
+
+  Error_1 <- rbind(Error_1, perf.nodewise$error_1)
+  Error_2 <- rbind(Error_2, perf.nodewise$error_2)
+  Error_3 <- rbind(Error_3, perf.glasso$error)
+}
+```
+
+```{r}
+plot.cv.error(Error_1, grid, col=2, ylim=c(0, 0.014))
+par(new=T)
+plot.cv.error(Error_2, grid, col=3, ylim=c(0, 0.014))
+par(new=T)
+plot.cv.error(Error_3, grid, col=4, ylim=c(0, 0.014))
+legend("topright",legend=c("approach 1","approach 2", "approach 3"), col=c(2,3,4), pch="-")
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot.cv.error(Error_1, grid, zoom = 2)
+title(main = "appraoch 1")
+plot.cv.error(Error_2, grid, zoom = 2)
+title(main = "appraoch 2")
+plot.cv.error(Error_3, grid, zoom = 2)
+title(main = "appraoch 3")
+```
+
+
 
 
 ## 5 Mean and Standard Error of Different Approaches
 ***
-
 ```{r}
-set.seed(20191109)
-
-start_time <- Sys.time()
+# it takes about 10 min to run this code chunk
+set.seed(666)
+p <- 50
+n <- 1000
+delta <- 3
+len_grid <- 50
+grid <- 10 ^ seq(0.5,-2.5, length = len_grid)
 
 auc_1 <- c()
 auc_2 <- c()
 auc_3 <- c()
-min_error_1 <- c()
-min_error_2 <- c()
-min_error_3 <- c()
-
+Error_1 <- c()
+Error_2 <- c()
+Error_3 <- c()
 t = 1
 while (t<=50){
   data <- generate(p, n, delta)
@@ -141,15 +187,12 @@ while (t<=50){
   auc_1 <- append(auc_1, perf.nodewise$auc_1)
   auc_2 <- append(auc_2, perf.nodewise$auc_2)
   auc_3 <- append(auc_3, perf.glasso$auc)
-  min_error_1 <- append(min_error_1, min(perf.nodewise$error_1))
-  min_error_2 <- append(min_error_2, min(perf.nodewise$error_2))
-  min_error_3 <- append(min_error_3, min(perf.glasso$error))
+  Error_1 <- rbind(Error_1, perf.nodewise$error_1)
+  Error_2 <- rbind(Error_2, perf.nodewise$error_2)
+  Error_3 <- rbind(Error_3, perf.glasso$error)
 
   t <- t+1
 }
-
-end_time <- Sys.time()
-end_time - start_time
 ```
 
 ```{r, results="hold"}
@@ -157,6 +200,9 @@ cat("AUC of Method 1\n   mean:           ", mean(auc_1), "\n   standard error: "
 cat("AUC of Method 2\n   mean:           ", mean(auc_2), "\n   standard error: ", sd(auc_2), "\n\n")
 cat("AUC of Method 3\n   mean:           ", mean(auc_3), "\n   standard error: ", sd(auc_3), "\n\n")
 
+min_error_1 <- apply(Error_1, 1, min)
+min_error_2 <- apply(Error_2, 1, min)
+min_error_3 <- apply(Error_3, 1, min)
 cat("Minimum Error Rate of Method 1\n   mean:           ", mean(min_error_1), "\n   standard error: ", sd(min_error_1), "\n\n")
 cat("Minimum Error Rate of Method 2\n   mean:           ", mean(min_error_2), "\n   standard error: ", sd(min_error_2), "\n\n")
 cat("Minimum Error Rate of Method 3\n   mean:           ", mean(min_error_3), "\n   standard error: ", sd(min_error_3), "\n\n")
@@ -166,4 +212,38 @@ cat("Minimum Error Rate of Method 3\n   mean:           ", mean(min_error_3), "\
 par(mfrow=c(1,2))
 boxplot(auc_1, auc_2, auc_3)
 boxplot(min_error_1, min_error_2, min_error_3)
+```
+
+```{r}
+plot.cv.error <- function(Error, grid, zoom=NULL, ...){
+  mean <- apply(Error, 2, mean)
+  sd <- apply(Error, 2, sd)
+  id_min <- which.min(mean)
+  # set zoom in area
+  if ( is.null(zoom) ) id_zoom <- 1:length(grid)
+  else id_zoom <- (id_min-zoom):(id_min+zoom)
+  # plot
+  plot(log10(grid)[id_zoom], mean[id_zoom]
+       , "l", xlab="log10(lambda)", ylab="mean error rate"
+       ,...)
+  abline(h=mean[id_min]+sd[id_min],lty=2)
+  abline(v=log10(grid)[id_min],lty=2)
+  lines(log10(grid)[id_zoom], (mean+sd)[id_zoom], col="grey", lty=3)
+  lines(log10(grid)[id_zoom], (mean-sd)[id_zoom], col="grey", lty=3)
+}
+```
+
+```{r}
+plot.cv.error(Error_1, grid, col=3)
+par(new=T)
+plot.cv.error(Error_2, grid, col=4)
+par(new=T)
+plot.cv.error(Error_3, grid, col=5)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot.cv.error(Error_1, grid, zoom = 28:33)
+plot.cv.error(Error_2, grid, zoom = 28:33)
+plot.cv.error(Error_3, grid, zoom = 31:36)
 ```

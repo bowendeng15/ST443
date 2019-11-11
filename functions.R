@@ -29,6 +29,8 @@ generate <- function(p, n, delta){
 }
 
 auc <- function(TPR, FPR){
+  TPR <- c(0, TPR, 1)
+  FPR <- c(0, FPR, 1)
   dFPR <- c(diff(FPR), 0)
   dTPR <- c(diff(TPR), 0)
   return( sum(TPR * dFPR) + sum(dTPR * dFPR)/2 ) 
@@ -161,6 +163,8 @@ performance.glasso.grid <- function(X, E_true, grid){
 }
 
 plot.roc <- function(TPR, FPR, title=NULL){
+  TPR <- c(0, TPR, 1)
+  FPR <- c(0, FPR, 1)
   plot(FPR, TPR, "l"
        , xlab="FPR", ylab="TPR"
        , xlim=c(0,1), ylim=c(0,1)
@@ -168,4 +172,21 @@ plot.roc <- function(TPR, FPR, title=NULL){
   )
   abline(a=0, b=1, col="red")
   title(main = title)
+}
+
+plot.cv.error <- function(Error, grid, zoom=NULL, ...){
+  mean <- apply(Error, 2, mean)
+  sd <- apply(Error, 2, sd)
+  id_min <- which.min(mean)
+  # set zoom in area
+  if ( is.null(zoom) ) id_zoom <- 1:length(grid)
+  else id_zoom <- (id_min-zoom):(id_min+zoom)
+  # plot
+  plot(log10(grid)[id_zoom], mean[id_zoom]
+       , "l", xlab="log10(lambda)", ylab="mean error rate"
+       ,...)
+  abline(h=mean[id_min]+sd[id_min],lty=2, ...) 
+  abline(v=log10(grid)[id_min],lty=2, ...)
+  lines(log10(grid)[id_zoom], (mean+sd)[id_zoom], col="grey", lty=3)
+  lines(log10(grid)[id_zoom], (mean-sd)[id_zoom], col="grey", lty=3)
 }
