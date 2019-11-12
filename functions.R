@@ -1,3 +1,12 @@
+##' @title Generate inverse covariance matrix  and mutilvariate normal data 
+##' @param p number of variables
+##' @param n number of samples
+##' @param delta value to make inverse covariance matrix positive definite
+##' @return a list object with attributes
+##' @name Theta inverse convariance matrix
+##' @name Sigma covariance matrix
+##' @name X mutilvariate normal data
+##' @name E_true set E (matrix form. column1:rowindex, column2:columnindex, column3:included in the E set or not)
 generate <- function(p, n, delta){
   obj <- list()
   obj$p <- p
@@ -28,14 +37,25 @@ generate <- function(p, n, delta){
   return(obj)
 }
 
+##' @title Compute auc using vectors of TPRs and FPR
+##' @param TPR vector of TPRs
+##' @param FPR vector of FPRs
+##' @return value of auc
 auc <- function(TPR, FPR){
-  TPR <- c(0, TPR, 1)
-  FPR <- c(0, FPR, 1)
+  TPR <- c(0, sort(TPR), 1)
+  FPR <- c(0, sort(FPR), 1)
   dFPR <- c(diff(FPR), 0)
   dTPR <- c(diff(TPR), 0)
   return( sum(TPR * dFPR) + sum(dTPR * dFPR)/2 ) 
 }
 
+##' @title Predict the E set using nodewise lasso approach
+##' @param X mutilvariate normal data
+##' @param lambda parameter in lasso
+##' @return a list object with attributes
+##' @name Beta matrix of estimated beta
+##' @name E_1 estimation of E using approach 1 (matrix form)
+##' @name E_2 estimation of E using approach 2 (matrix form)
 predict.nodewise <- function(X, lambda){
   p <- ncol(X)
   # estimate beta
@@ -73,6 +93,19 @@ predict.nodewise <- function(X, lambda){
   return(obj)
 }
 
+##' @title Compute the Perfomance with a grid of lambdas using nodewise lasso approach
+##' @param X mutilvariate normal data
+##' @param E_true the true E set (matrix form)
+##' @param grid vector of lambdas
+##' @return a list object with attributes
+##' @name tpr_1 vector of TPRs using approach 1
+##' @name fpr_1 vector of FPRs using approach 1
+##' @name error_1 vector of error rate using approach 1
+##' @name auc_1 value of AUC using approach 1
+##' @name tpr_2 vector of TPRs using approach 2
+##' @name fpr_2 vector of FPRs using approach 2
+##' @name error_2 vector of error rate using approach 2
+##' @name auc_2 value of AUC using approach 2
 performance.nodewise.grid <- function(X, E_true, grid){
   tpr_1 <- c()
   fpr_1 <- c()
@@ -117,6 +150,11 @@ performance.nodewise.grid <- function(X, E_true, grid){
   return(obj)
 }
 
+##' @title Predict the E set using graphical lasso approach
+##' @param X mutilvariate normal data
+##' @param lambda parameter in lasso
+##' @return a list object with attributes
+##' @name E estimation of E (matrix form)
 predict.glasso <- function(X, lambda){
   glasso <- glasso(cov(X), rho=lambda)
   E <- matrix(nrow=0, ncol=3)
@@ -135,6 +173,15 @@ predict.glasso <- function(X, lambda){
   return(obj)
 }
 
+##' @title Compute the Perfomance with a grid of lambdas using graphical lasso approach
+##' @param X mutilvariate normal data
+##' @param E_true the true E set (matrix form)
+##' @param grid vector of lambdas
+##' @return a list object with attributes
+##' @name tpr vector of TPRs 
+##' @name fpr vector of FPRs 
+##' @name error vector of error rate
+##' @name auc value of AUC
 performance.glasso.grid <- function(X, E_true, grid){
   tpr <- c()
   fpr <- c()
@@ -162,9 +209,13 @@ performance.glasso.grid <- function(X, E_true, grid){
   return(obj)
 }
 
+##' @title Plot the ROC curve
+##' @param TPR vector of TPRs
+##' @param FPR vector of FPRs
+##' @param title text of title
 plot.roc <- function(TPR, FPR, title=NULL){
-  TPR <- c(0, TPR, 1)
-  FPR <- c(0, FPR, 1)
+  TPR <- c(0, sort(TPR), 1)
+  FPR <- c(0, sort(FPR), 1)
   plot(FPR, TPR, "l"
        , xlab="FPR", ylab="TPR"
        , xlim=c(0,1), ylim=c(0,1)
@@ -174,6 +225,10 @@ plot.roc <- function(TPR, FPR, title=NULL){
   title(main = title)
 }
 
+##' @title Plot mean error rate against lambdas using cross validation
+##' @param Error matrix of error rates
+##' @param grid vector of lambdas
+##' @param zoom length of interval to zoom in the minimum
 plot.cv.error <- function(Error, grid, zoom=NULL, ...){
   mean <- apply(Error, 2, mean)
   sd <- apply(Error, 2, sd)
