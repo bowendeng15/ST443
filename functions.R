@@ -1,27 +1,34 @@
+library(MASS) #mvrnorm
+library(matrixcalc) #is.positive.definite
+library(glmnet) #lasso
+library(glasso)
+
 ##' @title Generate inverse covariance matrix  and mutilvariate normal data 
 ##' @param p number of variables
 ##' @param n number of samples
-##' @param delta value to make inverse covariance matrix positive definite
+##' @param prob probability of each entry of inverse covariance matrix being non-zero
 ##' @return a list object with attributes
 ##' @name Theta inverse convariance matrix
 ##' @name Sigma covariance matrix
 ##' @name X mutilvariate normal data
 ##' @name E_true set E (matrix form. column1:rowindex, column2:columnindex, column3:included in the E set or not)
-generate <- function(p, n, delta){
-  obj <- list()
-  obj$p <- p
-  obj$n <- n
-  obj$delta <- delta
-  Theta <- matrix(0,p,p) + delta*diag(p)
-  for (i in 2:p){
-    for (j in 1:(i-1)){
-      Theta[i,j] = 0.5*rbinom(1, 1, 0.1)
-      Theta[j,i] = Theta[i,j]
+generate <- function(p, n, prob=0.1){
+  # generate positive definite Theta
+  delta <- 3
+  flag <- FALSE
+  while ( ! flag ) {
+    Theta <- matrix(0,p,p) + delta*diag(p)
+    for (i in 2:p){
+      for (j in 1:(i-1)){
+        Theta[i,j] = 0.5*rbinom(1, 1, prob)
+        Theta[j,i] = Theta[i,j]
+      }
     }
+    Theta <- Theta/delta
+    flag <- is.positive.definite(Theta)
+    delta <- delta + 1
   }
-  obj$Theta <- Theta/delta
-  obj$Sigma <- solve(Theta)
-  obj$X <- mvrnorm(n=n, mu=rep(0, p), Sigma=obj$Sigma)
+  # derive set E
   E_true <- matrix(nrow=0, ncol=3)
   for (i in 1:(p-1)){
     for (j in (i+1):p){
@@ -33,7 +40,12 @@ generate <- function(p, n, delta){
       }
     }
   }
+  obj <- list()
+  obj$Theta <- Theta
+  obj$Sigma <- solve(Theta)
   obj$E_true <- E_true
+  # simulate mutivariate normal data
+  obj$X <- mvrnorm(n=n, mu=rep(0, p), Sigma=obj$Sigma)
   return(obj)
 }
 
