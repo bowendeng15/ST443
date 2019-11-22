@@ -250,7 +250,8 @@ plot.cv.error <- function(Error, grid, zoom=NULL, ...){
   else id_zoom <- (id_min-zoom):(id_min+zoom)
   # plot
   plot(log10(grid)[id_zoom], mean[id_zoom]
-       , "l", xlab="log10(lambda)", ylab="mean error rate"
+       , "l"
+       # , xlab="log10(lambda)", ylab="mean error rate"
        ,...)
   abline(h=mean[id_min]+sd[id_min],lty=2, ...) 
   abline(v=log10(grid)[id_min],lty=2, ...)
