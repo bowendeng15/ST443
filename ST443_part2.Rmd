@@ -55,12 +55,18 @@ grid <- 10 ^ seq(0.5,-2.5, length = len_grid)
 
 Run nodewise lasso over the grid. For this data, It took more than 10 secs.
 ```{r}
+start = Sys.time()
 perf.nodewise <- performance.nodewise.grid(data$X, data$E_true, grid)
+end = Sys.time()
+end-start
 ```
 
 Run graphical lasso over the grid. For this data, It took less than 1 secs. Glasso is much faster.
 ```{r}
+start = Sys.time()
 perf.glasso <- performance.glasso.grid(data$X, data$E_true, grid)
+end = Sys.time()
+end-start
 ```
 
 ```{r, fig.height = 3, fig.width = 9, fig.align = "center"}
@@ -110,7 +116,7 @@ Inspired by K-fold cross validaion, K error rates are generated on each lambda u
 set.seed(666)
 
 len_grid <- 50
-grid <- 10 ^ seq(-1.2,-1.6, length = len_grid)
+grid <- 10 ^ seq(-0.7, -1.3, length = len_grid)
 
 K =10
 folds = sample(rep(1:K, length = n))
@@ -129,31 +135,44 @@ for (k in 1:K){
 ```
 
 ```{r}
-# png(filename = "../plot/errorcv.png", width = 1200, height = 900, res=200)
+png(filename = "../plot/errorcv.png", width = 1200, height = 900, res=200)
 
-plot.cv.error(Error_1, grid, col=2, ylim=c(0, 0.014))
+plot.cv.error(Error_1, grid, col=2, ylim=c(0, 0.014)
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
 par(new=T)
-plot.cv.error(Error_2, grid, col=3, ylim=c(0, 0.014))
+plot.cv.error(Error_2, grid, col=3, ylim=c(0, 0.014)
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
 par(new=T)
-plot.cv.error(Error_3, grid, col=4, ylim=c(0, 0.014))
-legend("topright",legend=c("approach 1","approach 2", "approach 3"), col=c(2,3,4), pch="-", cex = 0.75)
+plot.cv.error(Error_3, grid, col=4, ylim=c(0, 0.014)
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
+legend("topright",legend=c("node-wise 1","node-wise 2", "graphical"), col=c(2,3,4), pch="-", cex = 0.75)
 
-# dev.off()
+dev.off()
 ```
 
 ```{r}
-# png(filename = "../plot/errorcvzoom.png", width = 1200, height = 300, res=130)
+png(filename = "../plot/errorcvzoom.png", width = 1200, height = 300, res=130)
 
 par(mfrow=c(1,3))
-plot.cv.error(Error_1, grid, zoom = 2)
-title(main = "appraoch 1")
-plot.cv.error(Error_2, grid, zoom = 2)
-title(main = "appraoch 2")
-plot.cv.error(Error_3, grid, zoom = 2)
-title(main = "appraoch 3")
+plot.cv.error(Error_1, grid, zoom = 2
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
+title(main = "node-wise 1")
+plot.cv.error(Error_2, grid, zoom = 2
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
+title(main = "node-wise 2")
+plot.cv.error(Error_3, grid, zoom = 6
+              , xlab=expression(paste("log(",lambda,")")), ylab="mean error rate")
+title(main = "graphical")
 
-# dev.off()
+dev.off()
 ```
+
+```{r}
+10^-1.045
+10^-1.05
+10^-0.96
+```
+
 
 
 
@@ -182,7 +201,7 @@ while (t<=50){
   while ( sum(data$E_true[,3])==0 ){ data <- generate(p, n, prob) }
   perf.nodewise <- performance.nodewise.grid(data$X, data$E_true, grid)
   perf.glasso <- performance.glasso.grid(data$X, data$E_true, grid)
-  
+
   auc_1 <- append(auc_1, perf.nodewise$auc_1)
   auc_2 <- append(auc_2, perf.nodewise$auc_2)
   auc_3 <- append(auc_3, perf.glasso$auc)
@@ -262,7 +281,7 @@ for (prob in probs){
   while ( sum(data$E_true[,3])==0 ){ data <- generate(p, n, prob) }
   perf.nodewise <- performance.nodewise.grid(data$X, data$E_true, grid)
   perf.glasso <- performance.glasso.grid(data$X, data$E_true, grid)
-  
+
   auc_prob_1 <- append(auc_prob_1, perf.nodewise$auc_1)
   auc_prob_2 <- append(auc_prob_2, perf.nodewise$auc_2)
   auc_prob_3 <- append(auc_prob_3, perf.glasso$auc)
