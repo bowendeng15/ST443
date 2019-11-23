@@ -84,6 +84,8 @@ predict.nodewise <- function(X, lambda){
 ##' @name error_2 vector of error rate using approach 2
 ##' @name auc_2 value of AUC using approach 2
 performance.nodewise.grid <- function(X, E_true, grid){
+  neg <- sum(E_true==0)
+  pos <- sum(E_true==1)
   tpr_1 <- c()
   fpr_1 <- c()
   tpr_2 <- c()
@@ -91,37 +93,18 @@ performance.nodewise.grid <- function(X, E_true, grid){
   for (lambda in grid){
     pred.nodewise <- predict.nodewise(X, lambda)
     # compute TPR FPR
-    Tab_1 <- table(pred.nodewise$E_1, E_true)
-    if (!(FALSE %in% rownames(Tab_1))){
-      Tab_1 <- rbind(c(0,0), Tab_1) # in case all predictions are 1
-    }
-    if (!(TRUE %in% rownames(Tab_1))){
-      Tab_1 <- rbind(Tab_1, c(0,0)) # in case all predictions are 0
-    }
-    tpr_1 <- append(tpr_1, Tab_1[2,2]/(sum(Tab_1[,2])) )
-    fpr_1 <- append(fpr_1, Tab_1[2,1]/(sum(Tab_1[,1])) ) 
-    
-    Tab_2 <- table(pred.nodewise$E_2, E_true)
-    if (!(FALSE %in% rownames(Tab_2))){
-      Tab_2 <- rbind(c(0,0), Tab_2)
-    }
-    if (!(TRUE %in% rownames(Tab_2))){
-      Tab_2 <- rbind(Tab_2, c(0,0))
-    }
-    tpr_2 <- append(tpr_2, Tab_2[2,2]/(sum(Tab_2[,2])) )
-    fpr_2 <- append(fpr_2, Tab_2[2,1]/(sum(Tab_2[,1])) )
+    tpr_1 <- append(tpr_1, sum( pred.nodewise$E_1==1 & E_true==1 ) / pos)
+    fpr_1 <- append(fpr_1, sum( pred.nodewise$E_1==1 & E_true==0 ) / neg)
+    tpr_2 <- append(tpr_2, sum( pred.nodewise$E_2==1 & E_true==1 ) / pos)
+    fpr_2 <- append(fpr_2, sum( pred.nodewise$E_2==1 & E_true==0 ) / neg)
   }
-  neg <- sum(E_true==0)
-  pos <- sum(E_true==1)
-  fnr_1 <- 1-tpr_1
-  fnr_2 <- 1-tpr_2
   obj <- list()
   obj$tpr_1 <- tpr_1
   obj$fpr_1 <- fpr_1
   obj$tpr_2 <- tpr_2
   obj$fpr_2 <- fpr_2
-  obj$error_1 <- (fpr_1*pos+fnr_1*neg)/(pos+neg)
-  obj$error_2 <- (fpr_2*pos+fnr_2*neg)/(pos+neg)
+  obj$error_1 <- (fpr_1*pos+(1-tpr_1)*neg)/(pos+neg)
+  obj$error_2 <- (fpr_2*pos+(1-tpr_2)*neg)/(pos+neg)
   obj$auc_1 <- auc(tpr_1, fpr_1)
   obj$auc_2 <- auc(tpr_2, fpr_2)
   return(obj)
@@ -149,28 +132,20 @@ predict.glasso <- function(X, lambda){
 ##' @name error vector of error rate
 ##' @name auc value of AUC
 performance.glasso.grid <- function(X, E_true, grid){
+  neg <- sum(E_true==0)
+  pos <- sum(E_true==1)
   tpr <- c()
   fpr <- c()
   for (lambda in grid){
     pred.glasso <- predict.glasso(X, lambda)
     # compute TPR FPR
-    Tab <- table(pred.glasso$E, E_true)
-    if (!(FALSE %in% rownames(Tab))){
-      Tab <- rbind(c(0,0), Tab) # in case all predictions are 1
-    }
-    if (!(TRUE %in% rownames(Tab))){
-      Tab <- rbind(Tab, c(0,0)) # in case all predictions are 0
-    }
-    tpr <- append(tpr, Tab[2,2]/(sum(Tab[,2])) )
-    fpr <- append(fpr, Tab[2,1]/(sum(Tab[,1])) ) 
+    tpr <- append(tpr, sum( pred.glasso$E==1 & E_true==1 ) / pos)
+    fpr <- append(fpr, sum( pred.glasso$E==1 & E_true==0 ) / neg)
   }
-  neg <- sum(E_true==0)
-  pos <- sum(E_true==1)
-  fnr <- 1-tpr
   obj <- list()
   obj$tpr <- tpr
   obj$fpr <- fpr
-  obj$error <- (fpr*pos+fnr*neg)/(pos+neg)
+  obj$error <- (fpr*pos+(1-tpr)*neg)/(pos+neg)
   obj$auc <- auc(tpr, fpr)
   return(obj)
 }

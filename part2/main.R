@@ -120,7 +120,7 @@ Error_3 <- c()
 t = 1
 while (t<=50){
   data <- generate(p, n, prob)
-  while ( sum(data$E_true[,3])==0 ){ data <- generate(p, n, prob) }
+  while ( sum(data$E_true)==0 ){ data <- generate(p, n, prob) }
   perf.nodewise <- performance.nodewise.grid(data$X, data$E_true, grid)
   perf.glasso <- performance.glasso.grid(data$X, data$E_true, grid)
   auc_1 <- append(auc_1, perf.nodewise$auc_1)
