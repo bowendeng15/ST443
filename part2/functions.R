@@ -14,38 +14,23 @@ library(glasso)
 ##' @name E_true set E (matrix form. column1:rowindex, column2:columnindex, column3:included in the E set or not)
 generate <- function(p, n, prob=0.1){
   # generate positive definite Theta
-  delta <- 3
+  delta <- 3 # initial delta
   flag <- FALSE
   while ( ! flag ) {
-    Theta <- matrix(0,p,p) + delta*diag(p)
-    for (i in 2:p){
-      for (j in 1:(i-1)){
-        Theta[i,j] = 0.5*rbinom(1, 1, prob)
-        Theta[j,i] = Theta[i,j]
-      }
-    }
-    Theta <- Theta/delta
+    Theta <- matrix(0,p,p)
+    num_edge <- p*(p-1)/2 # C(p,2)
+    Theta[upper.tri(Theta)] <- 0.5*rbinom(num_edge, 1, prob)
+    Theta <- Theta + t(Theta) # symmetric
+    Theta <- (Theta + delta*diag(p))/delta
+    # ensure Theta positive definite
     flag <- is.positive.definite(Theta)
     delta <- delta + 1
-  }
-  # derive set E
-  E_true <- matrix(nrow=0, ncol=3)
-  for (i in 1:(p-1)){
-    for (j in (i+1):p){
-      if ( Theta[i,j] ){
-        E_true <- rbind(E_true, c(i,j,1))
-      }
-      else{
-        E_true <- rbind(E_true, c(i,j,0))
-      }
-    }
   }
   obj <- list()
   obj$Theta <- Theta
   obj$Sigma <- solve(Theta)
-  obj$E_true <- E_true
-  # simulate mutivariate normal data
-  obj$X <- mvrnorm(n=n, mu=rep(0, p), Sigma=obj$Sigma)
+  obj$E_true <- Theta[upper.tri(Theta)]!=0 # derive set E
+  obj$X <- mvrnorm(n=n, mu=rep(0, p), Sigma=obj$Sigma) # simulate mvnormal data
   return(obj)
 }
 
@@ -69,39 +54,19 @@ auc <- function(TPR, FPR){
 ##' @name E_1 estimation of E using approach 1 (matrix form)
 ##' @name E_2 estimation of E using approach 2 (matrix form)
 predict.nodewise <- function(X, lambda){
+  Beta <- c() # estimate beta
   p <- ncol(X)
-  # estimate beta
-  Beta <- matrix(nrow=0, ncol=p)
   for (j in 1:p){
     lasso <- glmnet(X[,-j], X[,j], lambda = lambda)
     beta_j <- coef(lasso)[2:p]
     Beta <- rbind(Beta
-                  , append(beta_j, NA, after=j-1) # NA just a placeholder, meaningless
+                  , append(beta_j, NA, after=j-1) # NA just a placeholder
     ) 
-  }
-  # hence get E_1 and E_2
-  E_1 <- matrix(nrow=0, ncol=3)
-  E_2 <- matrix(nrow=0, ncol=3)
-  for (i in 1:(p-1)){
-    for (j in (i+1):p){
-      if (Beta[i,j]){
-        E_1 <- rbind(E_1, c(i,j,1))
-      }
-      else{
-        E_1 <- rbind(E_1, c(i,j,0))
-      }
-      if (Beta[i,j] && Beta[j,i]){
-        E_2 <- rbind(E_2, c(i,j,1))
-      }
-      else{
-        E_2 <- rbind(E_2, c(i,j,0))
-      }
-    }
   }
   obj <- list()
   obj$Beta <- Beta
-  obj$E_1 <- E_1
-  obj$E_2 <- E_2
+  obj$E_1 <- Beta[upper.tri(Beta)]!=0
+  obj$E_2 <- Beta[upper.tri(Beta)]!=0 & t(Beta)[upper.tri(Beta)]!=0
   return(obj)
 }
 
@@ -126,28 +91,28 @@ performance.nodewise.grid <- function(X, E_true, grid){
   for (lambda in grid){
     pred.nodewise <- predict.nodewise(X, lambda)
     # compute TPR FPR
-    Tab_1 <- table(pred.nodewise$E_1[,3], E_true[,3])
-    if (!(0 %in% rownames(Tab_1))){
+    Tab_1 <- table(pred.nodewise$E_1, E_true)
+    if (!(FALSE %in% rownames(Tab_1))){
       Tab_1 <- rbind(c(0,0), Tab_1) # in case all predictions are 1
     }
-    if (!(1 %in% rownames(Tab_1))){
+    if (!(TRUE %in% rownames(Tab_1))){
       Tab_1 <- rbind(Tab_1, c(0,0)) # in case all predictions are 0
     }
     tpr_1 <- append(tpr_1, Tab_1[2,2]/(sum(Tab_1[,2])) )
     fpr_1 <- append(fpr_1, Tab_1[2,1]/(sum(Tab_1[,1])) ) 
     
-    Tab_2 <- table(pred.nodewise$E_2[,3], E_true[,3])
-    if (!(0 %in% rownames(Tab_2))){
+    Tab_2 <- table(pred.nodewise$E_2, E_true)
+    if (!(FALSE %in% rownames(Tab_2))){
       Tab_2 <- rbind(c(0,0), Tab_2)
     }
-    if (!(1 %in% rownames(Tab_2))){
+    if (!(TRUE %in% rownames(Tab_2))){
       Tab_2 <- rbind(Tab_2, c(0,0))
     }
     tpr_2 <- append(tpr_2, Tab_2[2,2]/(sum(Tab_2[,2])) )
     fpr_2 <- append(fpr_2, Tab_2[2,1]/(sum(Tab_2[,1])) )
   }
-  neg <- sum(E_true[,3]==0)
-  pos <- sum(E_true[,3]==1)
+  neg <- sum(E_true==0)
+  pos <- sum(E_true==1)
   fnr_1 <- 1-tpr_1
   fnr_2 <- 1-tpr_2
   obj <- list()
@@ -169,19 +134,8 @@ performance.nodewise.grid <- function(X, E_true, grid){
 ##' @name E estimation of E (matrix form)
 predict.glasso <- function(X, lambda){
   glasso <- glasso(cov(X), rho=lambda)
-  E <- matrix(nrow=0, ncol=3)
-  for (i in 1:(p-1)){
-    for (j in (i+1):p){
-      if ( glasso$wi[i,j] ){
-        E <- rbind(E, c(i,j,1))
-      }
-      else{
-        E <- rbind(E, c(i,j,0))
-      }
-    }
-  }
   obj <- list()
-  obj$E <- E
+  obj$E <- glasso$wi[upper.tri(glasso$wi)]!=0
   return(obj)
 }
 
@@ -200,18 +154,18 @@ performance.glasso.grid <- function(X, E_true, grid){
   for (lambda in grid){
     pred.glasso <- predict.glasso(X, lambda)
     # compute TPR FPR
-    Tab <- table(pred.glasso$E[,3], E_true[,3])
-    if (!(0 %in% rownames(Tab))){
+    Tab <- table(pred.glasso$E, E_true)
+    if (!(FALSE %in% rownames(Tab))){
       Tab <- rbind(c(0,0), Tab) # in case all predictions are 1
     }
-    if (!(1 %in% rownames(Tab))){
+    if (!(TRUE %in% rownames(Tab))){
       Tab <- rbind(Tab, c(0,0)) # in case all predictions are 0
     }
     tpr <- append(tpr, Tab[2,2]/(sum(Tab[,2])) )
     fpr <- append(fpr, Tab[2,1]/(sum(Tab[,1])) ) 
   }
-  neg <- sum(E_true[,3]==0)
-  pos <- sum(E_true[,3]==1)
+  neg <- sum(E_true==0)
+  pos <- sum(E_true==1)
   fnr <- 1-tpr
   obj <- list()
   obj$tpr <- tpr
