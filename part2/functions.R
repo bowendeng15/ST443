@@ -157,11 +157,7 @@ performance.glasso.grid <- function(X, E_true, grid){
 plot.roc <- function(TPR, FPR, title=NULL){
   TPR <- c(0, sort(TPR), 1)
   FPR <- c(0, sort(FPR), 1)
-  plot(FPR, TPR, "l"
-       , xlab="FPR", ylab="TPR"
-       , xlim=c(0,1), ylim=c(0,1)
-       # , xaxs="i", yaxs="i"
-  )
+  plot(FPR, TPR, "l", xlab="FPR", ylab="TPR", xlim=c(0,1), ylim=c(0,1))
   abline(a=0, b=1, col="red")
   title(main = title)
 }
@@ -170,20 +166,19 @@ plot.roc <- function(TPR, FPR, title=NULL){
 ##' @param Error matrix of error rates
 ##' @param grid vector of lambdas
 ##' @param zoom length of interval to zoom in the minimum
-plot.cv.error <- function(Error, grid, zoom=NULL, ...){
+plot.cv.error <- function(Error, grid, ...){
   mean <- apply(Error, 2, mean)
   sd <- apply(Error, 2, sd)
   id_min <- which.min(mean)
-  # set zoom in area
-  if ( is.null(zoom) ) id_zoom <- 1:length(grid)
-  else id_zoom <- (id_min-zoom):(id_min+zoom)
+  id_1se <- which(mean<(mean+sd)[id_min])[1]
+  id_2se <- which(mean<(mean+2*sd)[id_min])[1]
+  id_3se <- which(mean<(mean+3*sd)[id_min])[1]
   # plot
-  plot(log10(grid)[id_zoom], mean[id_zoom]
-       , "l"
-       # , xlab="log10(lambda)", ylab="mean error rate"
-       ,...)
-  abline(h=mean[id_min]+sd[id_min],lty=2, ...) 
-  abline(v=log10(grid)[id_min],lty=2, ...)
-  lines(log10(grid)[id_zoom], (mean+sd)[id_zoom], col="grey", lty=3)
-  lines(log10(grid)[id_zoom], (mean-sd)[id_zoom], col="grey", lty=3)
+  plot(log10(grid), mean, "l", ...)
+  abline(h=mean[id_min]+sd[id_min],lty=2, col=2)
+  abline(v=log10(grid)[id_min],lty=2, col=2)
+  abline(v=log10(grid)[id_1se],lty=2, col=2)
+  lines(log10(grid), (mean+sd), col="grey", lty=3)
+  lines(log10(grid), (mean-sd), col="grey", lty=3)
+  return(list(lambda.min=grid[id_min], lambda.1se=grid[id_1se], lambda.2se=grid[id_2se], lambda.3se=grid[id_3se]))
 }
