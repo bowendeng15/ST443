@@ -9,10 +9,12 @@ https://statweb.stanford.edu/~jhf/ftp/glasso-bio.pdf
 https://cran.r-project.org/web/packages/glasso/glasso.pdf
 
 
-## How to Use
+## Intoduction
 
-+ `functions.R` is the file including core functions.
++ `part1`: the code and data for part1.
 
-+ `ST443_part2.Rmd` is the script to apply fucntions and make plots. Make sure it is in the same directory as `functions.R`.
++ `part2`: the code for part2.
 
-+ `Instruction.pdf` is the instruction of the project.
++ `Instruction.pdf`: the instruction of the project.
+
++ `Instruction.pdf`: the final report.
