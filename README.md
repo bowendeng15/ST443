@@ -17,4 +17,4 @@ https://cran.r-project.org/web/packages/glasso/glasso.pdf
 
 + `Instruction.pdf`: the instruction of the project.
 
-+ `Instruction.pdf`: the final report.
++ `report.pdf`: the final report.
